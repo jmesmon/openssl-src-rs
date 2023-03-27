@@ -121,14 +121,19 @@ impl Build {
         let install_dir = out_dir.join("install");
 
         if build_dir.exists() {
-            fs::remove_dir_all(&build_dir).unwrap();
+            fs::remove_dir_all(&build_dir)
+                .expect(&format!("failed to remove {}", build_dir.display()));
         }
         if install_dir.exists() {
-            fs::remove_dir_all(&install_dir).unwrap();
+            fs::remove_dir_all(&install_dir)
+                .expect(&format!("failed to remove {}", install_dir.display()));
         }
 
         let inner_dir = build_dir.join("src");
-        fs::create_dir_all(&inner_dir).unwrap();
+        fs::create_dir_all(&inner_dir).expect(&format!(
+            "failed to create directory {}",
+            inner_dir.display()
+        ));
         cp_r(&source_dir(), &inner_dir);
         apply_patches(target, &inner_dir);
 
@@ -519,10 +524,12 @@ Error {}:
 }
 
 fn cp_r(src: &Path, dst: &Path) {
-    for f in fs::read_dir(src).unwrap() {
-        let f = f.unwrap();
+    for f in fs::read_dir(src).expect(&format!("failed to read_dir {}", src.display())) {
+        let f = f.expect(&format!("failed to read_dir entry in {}", src.display()));
         let path = f.path();
-        let name = path.file_name().unwrap();
+        let name = path
+            .file_name()
+            .expect(&format!("failed to get file_name from {}", path.display()));
 
         // Skip git metadata as it's been known to cause issues (#26) and
         // otherwise shouldn't be required
@@ -531,12 +538,19 @@ fn cp_r(src: &Path, dst: &Path) {
         }
 
         let dst = dst.join(name);
-        if f.file_type().unwrap().is_dir() {
-            fs::create_dir_all(&dst).unwrap();
+        if f.file_type()
+            .expect(&format!("failed to get file type for {}", path.display()))
+            .is_dir()
+        {
+            fs::create_dir_all(&dst).expect(&format!("failed to create_dir_all {}", dst.display()));
             cp_r(&path, &dst);
         } else {
             let _ = fs::remove_file(&dst);
-            fs::copy(&path, &dst).unwrap();
+            fs::copy(&path, &dst).expect(&format!(
+                "failed to copy {} to {}",
+                path.display(),
+                dst.display(),
+            ));
         }
     }
 }
